@@ -1,7 +1,7 @@
 {
   "name": "goimport-intellisense",
 	"displayName": "goimport-intellisense",
-	"description": "path intellisense of import statements for golang",
+	"description": "path intellisense of import declaration for golang",
 	"version": "0.1.0",
 	"engines": {
 		"vscode": "^1.68.0"
