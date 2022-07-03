@@ -1,10 +1,7 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import * as fs from "fs";
 
 function seekDir(dirpath: string): string[] {
-    console.log("start seek '%s'", dirpath);
     let dirs: string[] = [];
     let list = fs.readdirSync(dirpath);
     if (list !== undefined) {
@@ -18,15 +15,12 @@ function seekDir(dirpath: string): string[] {
     return dirs;
 }
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-
-    // Use the console to output diagnostic information (console.log) and errors (console.error)
-    // This line of code will only be executed once when your extension is activated
-    console.log('Congratulations, your extension "goimport-intellisense" is now active!');
     const gopath: string = vscode.workspace.getConfiguration('go').get('gopath') || "";
-    console.log("gopath = %s", gopath);
+    if (gopath === "") {
+        vscode.window.showErrorMessage('goimport-intellisense: Not found setting of `GOPATH`', 'OK');
+        return;
+    }
 
     const providor1 = vscode.languages.registerCompletionItemProvider(
         'go',

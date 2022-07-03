@@ -2,6 +2,8 @@
 
 Visual Studio Code plugin to autocomplete _import declaration_.
 
+This extension searches directories in `GOPATH/src/**`.
+
 ## Usage
 
 1. set `"go.gopath"` configuration to your settings.
