@@ -2,23 +2,23 @@ import * as vscode from 'vscode';
 import * as fs from "fs";
 
 function seekDir(dirpath: string): string[] {
-    let dirs: string[] = [];
-    let list = fs.readdirSync(dirpath);
-    if (list !== undefined) {
-        list.forEach(function (dir) {
-            if (!dir.startsWith('.') && fs.statSync(dirpath + "\\" + dir).isDirectory()) {
-                dirs.push(dir);
-            }
-        });
-    }
-    
-    return dirs;
+    let list = fs.readdirSync(dirpath) ?? [];
+    return list.filter(dir => !dir.startsWith('.') && fs.statSync(dirpath + '\\' + dir).isDirectory());
 }
 
 export function activate(context: vscode.ExtensionContext) {
-    const gopath: string = vscode.workspace.getConfiguration('go').get('gopath') || "";
+    const gopath: string = vscode.workspace.getConfiguration('go').get('gopath') ?? "";
+    const goroot: string = vscode.workspace.getConfiguration('go').get('goroot') ?? "";
+    let failed = false;
     if (gopath === "") {
         vscode.window.showErrorMessage('goimport-intellisense: Not found setting of `GOPATH`', 'OK');
+        failed = true;
+    }
+    if (goroot === "") {
+        vscode.window.showErrorMessage('goimport-intellisense: Not found setting of `GOROOT`', 'OK');
+        failed = true;
+    }
+    if (failed) {
         return;
     }
 
@@ -34,49 +34,50 @@ export function activate(context: vscode.ExtensionContext) {
                 let diff = 1;
                 let found = false;
                 while (diff <= position.line) {
-                    console.log(diff);
                     const prevLine = position.translate(-diff, 0);
                     const prevLineStr = document.lineAt(prevLine).text;
-                    console.log("'%s'", prevLineStr);
                     let result = prevLineStr.match(importRegex);
                     if (result !== null) {
-                        console.log(result['input']);
-                        console.log('this is import statement');
                         found = true;
                         break;
                     } else if (prevLineStr.match(importQuatationRegex) === null) {
-                        console.log('invalid import statement: this line must match by import path');
                         return undefined;
                     }
                     diff++;
                 }
                 if (!found) {
-                    console.log('this is not import statement');
                     return undefined;
                 }
 
                 const linePrefix = document.lineAt(position).text;
-                console.log(linePrefix);
                 let result = linePrefix.match(importQuatationRegex);
                 if (result === null) {
-                    console.log('invalid import path: this line is import path but not must match by import path');
                     return undefined;
                 }
-                console.log('found " statement');
-                console.log(result);
                 const importPath = result[4];
-                console.log("imported '%s'", importPath);
 
-                let suggets = seekDir(gopath + "\\src\\" + importPath).map(function (dir) {
+                // const gorootSrc = seekDir(goroot + "\\src\\" + importPath);
+                // let gorootSuggets = gorootSrc.map(dir => {
+                //     const completionItem = new vscode.CompletionItem(dir, vscode.CompletionItemKind.Folder);
+                //     completionItem.documentation = new vscode.MarkdownString('standard library');
+                //     completionItem.commitCharacters = ['\t'];
+                //     completionItem.command = { command: 'editor.action.triggerSugget', title: 'goimport-intellisense' };
+                //     return completionItem;
+                // });
+
+                const gopathSrc = seekDir(gopath + "\\src\\" + importPath);
+                let gopathSuggets = gopathSrc.map(dir => {
                     const completionItem = new vscode.CompletionItem(dir, vscode.CompletionItemKind.Folder);
-                    completionItem.documentation = new vscode.MarkdownString('_test_ complesion');
+                    completionItem.documentation = new vscode.MarkdownString('user library');
                     completionItem.commitCharacters = ['\t'];
-                    completionItem.command = { command: 'editor.action.triggerSugget', title: "test" };
+                    completionItem.command = { command: 'editor.action.triggerSugget', title: 'goimport-intellisense' };
                     return completionItem;
                 });
-                console.log(suggets);
 
-                return suggets;
+                // const resultList = gorootSuggets.concat(gopathSuggets);
+                // console.log(resultList);
+                // return resultList;
+                return gopathSuggets;
             }
         }
         , '"', "/"

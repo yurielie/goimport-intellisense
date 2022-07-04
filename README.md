@@ -18,7 +18,9 @@ This extension searches directories in `GOPATH/src/**`.
 
 ## Known Issues
 
+- not support to a completion of standard library (e.g. `fmt`).
 - not support a format `import "<package name>"`.
+- ignore packages that its name does not match its directory path.
 - no validation to prevent a path string to go up to parent folder.
 - inefficient algorithm to detect whether written line match as import declaration format or not.
 - and too many issues to fix.
