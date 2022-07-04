@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
-import * as fs from "fs";
+import {existsSync, readdirSync, statSync} from "fs";
 
 function seekDir(dirpath: string): string[] {
-    let list = fs.readdirSync(dirpath) ?? [];
-    return list.filter(dir => !dir.startsWith('.') && fs.statSync(dirpath + '\\' + dir).isDirectory());
+    if (!existsSync(dirpath)) {
+        return [];
+    }
+    const list = readdirSync(dirpath) ?? [];
+    return list.filter(dir => !dir.startsWith('.') && statSync(dirpath + '\\' + dir).isDirectory());
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -22,15 +25,12 @@ export function activate(context: vscode.ExtensionContext) {
         return;
     }
 
-    const providor1 = vscode.languages.registerCompletionItemProvider(
+    const importRegex = /^import +\($/;
+    const importQuatationRegex = /^((\t| +)("(.*)")?)?$/;
+    const importProvider = vscode.languages.registerCompletionItemProvider(
         'go',
         {
-
             provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken, context: vscode.CompletionContext) {
-
-                // check this line in import statement
-                const importRegex = /^import +\($/;
-                const importQuatationRegex = /^((\t| +)("(.*)")?)?$/;
                 let diff = 1;
                 let found = false;
                 while (diff <= position.line) {
@@ -54,19 +54,19 @@ export function activate(context: vscode.ExtensionContext) {
                 if (result === null) {
                     return undefined;
                 }
-                const importPath = result[4];
+                const input = result[4];
 
-                // const gorootSrc = seekDir(goroot + "\\src\\" + importPath);
-                // let gorootSuggets = gorootSrc.map(dir => {
-                //     const completionItem = new vscode.CompletionItem(dir, vscode.CompletionItemKind.Folder);
-                //     completionItem.documentation = new vscode.MarkdownString('standard library');
-                //     completionItem.commitCharacters = ['\t'];
-                //     completionItem.command = { command: 'editor.action.triggerSugget', title: 'goimport-intellisense' };
-                //     return completionItem;
-                // });
+                const gorooDirs = seekDir(goroot + "\\src\\" + input);
+                const gorootSuggets = gorooDirs.map(dir => {
+                    const completionItem = new vscode.CompletionItem(dir, vscode.CompletionItemKind.Folder);
+                    completionItem.documentation = new vscode.MarkdownString('standard library');
+                    completionItem.commitCharacters = ['\t'];
+                    completionItem.command = { command: 'editor.action.triggerSugget', title: 'goimport-intellisense' };
+                    return completionItem;
+                });
 
-                const gopathSrc = seekDir(gopath + "\\src\\" + importPath);
-                let gopathSuggets = gopathSrc.map(dir => {
+                const gopathDirs = seekDir(gopath + "\\src\\" + input);
+                const gopathSuggets = gopathDirs.map(dir => {
                     const completionItem = new vscode.CompletionItem(dir, vscode.CompletionItemKind.Folder);
                     completionItem.documentation = new vscode.MarkdownString('user library');
                     completionItem.commitCharacters = ['\t'];
@@ -74,16 +74,13 @@ export function activate(context: vscode.ExtensionContext) {
                     return completionItem;
                 });
 
-                // const resultList = gorootSuggets.concat(gopathSuggets);
-                // console.log(resultList);
-                // return resultList;
-                return gopathSuggets;
+                return gorootSuggets.concat(gopathSuggets);
             }
         }
         , '"', "/"
     );
 
-    context.subscriptions.push(providor1);
+    context.subscriptions.push(importProvider);
 }
 
 // this method is called when your extension is deactivated
